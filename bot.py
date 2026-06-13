@@ -4,28 +4,22 @@ import time
 import schedule
 from datetime import datetime
 import os
-from bs4 import BeautifulSoup
 
-# ==================== تنظیمات ====================
 TELEGRAM_TOKEN = "8080991247:AAGgOkBCRYx706lgepy-FTwrzrhRUHrLd6I"
 CHAT_ID = "96245995"
-CHECK_INTERVAL_HOURS = 2
+CHECK_INTERVAL_MINUTES = 10
 
-# ==================== دیوار ====================
 DIVAR_SEARCHES = [
     {"city": "salman-shahr", "category": "villa", "label": "🏡 ویلا فروشی سلمانشهر"},
     {"city": "salman-shahr", "category": "apartment", "label": "🏢 آپارتمان فروشی سلمانشهر"},
-    {"city": "salman-shahr", "category": "rent-villa", "label": "🏡 ویلا اجاره‌ای سلمانشهر"},
-    {"city": "salman-shahr", "category": "rent-apartment", "label": "🏢 آپارتمان اجاره‌ای سلمانشهر"},
+    {"city": "salman-shahr", "category": "residential-rent", "label": "🔑 اجاره سلمانشهر"},
     {"city": "salman-shahr", "category": "plot", "label": "🌿 زمین سلمانشهر"},
     {"city": "abbasabad-mazandaran", "category": "villa", "label": "🏡 ویلا فروشی عباس‌آباد"},
     {"city": "abbasabad-mazandaran", "category": "apartment", "label": "🏢 آپارتمان فروشی عباس‌آباد"},
-    {"city": "abbasabad-mazandaran", "category": "rent-villa", "label": "🏡 ویلا اجاره‌ای عباس‌آباد"},
-    {"city": "abbasabad-mazandaran", "category": "rent-apartment", "label": "🏢 آپارتمان اجاره‌ای عباس‌آباد"},
+    {"city": "abbasabad-mazandaran", "category": "residential-rent", "label": "🔑 اجاره عباس‌آباد"},
     {"city": "abbasabad-mazandaran", "category": "plot", "label": "🌿 زمین عباس‌آباد"},
 ]
 
-# ==================== شیپور ====================
 SHEYPOOR_SEARCHES = [
     {"city": "salman-shahr", "label": "سلمانشهر"},
     {"city": "abbas-abad", "label": "عباس‌آباد"},
@@ -52,16 +46,19 @@ def send_telegram(message):
         "disable_web_page_preview": False
     }
     try:
-        requests.post(url, data=data, timeout=10)
+        r = requests.post(url, data=data, timeout=10)
+        return r.status_code == 200
     except Exception as e:
-        print(f"خطا در ارسال پیام: {e}")
+        print(f"خطا تلگرام: {e}")
+    return False
 
 def fetch_divar(city, category):
-    url = "https://api.divar.ir/v8/web-search/1/real-estate"
-    params = {"city": city, "category": category, "sort": "sort_date"}
+    url = f"https://api.divar.ir/v8/web-search/1/{category}"
+    params = {"city": city, "sort": "sort_date"}
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     try:
         response = requests.get(url, params=params, headers=headers, timeout=15)
+        print(f"دیوار {city}/{category}: status={response.status_code}")
         if response.status_code == 200:
             return response.json()
     except Exception as e:
@@ -69,12 +66,20 @@ def fetch_divar(city, category):
     return None
 
 def fetch_sheypoor(city):
-    url = f"https://www.sheypoor.com/s/{city}/real-estate"
-    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    url = f"https://api.sheypoor.com/api/v10/listings"
+    params = {
+        "path": f"s/{city}/real-estate",
+        "sortBy": "date",
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "Accept": "application/json",
+    }
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, params=params, headers=headers, timeout=15)
+        print(f"شیپور {city}: status={response.status_code}")
         if response.status_code == 200:
-            return response.text
+            return response.json()
     except Exception as e:
         print(f"خطا شیپور: {e}")
     return None
@@ -90,6 +95,7 @@ def check_new_listings():
         if not data:
             continue
         posts = data.get("web_widgets", {}).get("post_list", [])
+        print(f"دیوار {search['city']}/{search['category']}: {len(posts)} آگهی")
         for item in posts:
             post = item.get("data", {})
             token = post.get("token", "")
@@ -106,39 +112,38 @@ def check_new_listings():
 💰 {price_text}
 🔗 <a href="{link}">مشاهده آگهی</a>
 ⏰ {datetime.now().strftime('%H:%M')}"""
-            send_telegram(message)
-            seen.add(token)
-            total_new += 1
-            time.sleep(1)
+            if send_telegram(message):
+                seen.add(token)
+                total_new += 1
+                time.sleep(1)
         time.sleep(2)
 
     # بررسی شیپور
     for search in SHEYPOOR_SEARCHES:
-        html = fetch_sheypoor(search["city"])
-        if not html:
+        data = fetch_sheypoor(search["city"])
+        if not data:
             continue
-        soup = BeautifulSoup(html, "html.parser")
-        listings = soup.find_all("a", href=True, limit=20)
-        for item in listings:
-            href = item.get("href", "")
-            if "/real-estate/" not in href and "/املاک/" not in href:
-                continue
-            post_id = href.split("/")[-1].split("?")[0]
+        items = data.get("data", {}).get("items", [])
+        print(f"شیپور {search['city']}: {len(items)} آگهی")
+        for item in items:
+            post_id = str(item.get("id", ""))
             if not post_id or post_id in seen:
                 continue
-            title = item.get_text(strip=True)[:50] or "بدون عنوان"
-            if len(title) < 5:
-                continue
-            link = f"https://www.sheypoor.com{href}" if href.startswith("/") else href
+            title = item.get("title", "بدون عنوان")
+            price = item.get("price", {})
+            price_text = price.get("display", "قیمت توافقی") if price else "قیمت توافقی"
+            slug = item.get("slug", post_id)
+            link = f"https://www.sheypoor.com/v/{slug}"
             message = f"""📌 <b>شیپور — {search["label"]}</b>
 
 <b>{title}</b>
+💰 {price_text}
 🔗 <a href="{link}">مشاهده آگهی</a>
 ⏰ {datetime.now().strftime('%H:%M')}"""
-            send_telegram(message)
-            seen.add(post_id)
-            total_new += 1
-            time.sleep(1)
+            if send_telegram(message):
+                seen.add(post_id)
+                total_new += 1
+                time.sleep(1)
         time.sleep(2)
 
     save_seen(seen)
@@ -146,9 +151,9 @@ def check_new_listings():
 
 def main():
     print("ربات شروع به کار کرد! 🤖")
-    send_telegram("✅ ربات دیوار و شیپور شروع به کار کرد!\n\n📍 شهرها: سلمانشهر، عباس‌آباد\n🔍 دیوار + شیپور\n⏰ هر ۲ ساعت بررسی می‌کنم!")
+    send_telegram("✅ ربات آپدیت شد و شروع به کار کرد!\n\n📍 سلمانشهر + عباس‌آباد\n🔍 دیوار + شیپور\n⏰ هر ۱۰ دقیقه")
     check_new_listings()
-    schedule.every(CHECK_INTERVAL_HOURS).hours.do(check_new_listings)
+    schedule.every(CHECK_INTERVAL_MINUTES).minutes.do(check_new_listings)
     while True:
         schedule.run_pending()
         time.sleep(60)
