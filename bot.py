@@ -12,16 +12,16 @@ CHECK_INTERVAL_HOURS = 2
 
 # شهرها و دسته‌بندی‌ها
 SEARCHES = [
-    {"city": "matelqu", "category": "villa", "label": "ویلا فروشی متل‌قو"},
-    {"city": "matelqu", "category": "apartment", "label": "آپارتمان فروشی متل‌قو"},
-    {"city": "matelqu", "category": "rent-villa", "label": "ویلا اجاره‌ای متل‌قو"},
-    {"city": "matelqu", "category": "rent-apartment", "label": "آپارتمان اجاره‌ای متل‌قو"},
-    {"city": "matelqu", "category": "plot", "label": "زمین متل‌قو"},
-    {"city": "abbasabad", "category": "villa", "label": "ویلا فروشی عباس‌آباد"},
-    {"city": "abbasabad", "category": "apartment", "label": "آپارتمان فروشی عباس‌آباد"},
-    {"city": "abbasabad", "category": "rent-villa", "label": "ویلا اجاره‌ای عباس‌آباد"},
-    {"city": "abbasabad", "category": "rent-apartment", "label": "آپارتمان اجاره‌ای عباس‌آباد"},
-    {"city": "abbasabad", "category": "plot", "label": "زمین عباس‌آباد"},
+    {"city": "salman-shahr", "category": "villa", "label": "ویلا فروشی سلمانشهر"},
+    {"city": "salman-shahr", "category": "apartment", "label": "آپارتمان فروشی سلمانشهر"},
+    {"city": "salman-shahr", "category": "rent-villa", "label": "ویلا اجاره‌ای سلمانشهر"},
+    {"city": "salman-shahr", "category": "rent-apartment", "label": "آپارتمان اجاره‌ای سلمانشهر"},
+    {"city": "salman-shahr", "category": "plot", "label": "زمین سلمانشهر"},
+    {"city": "abbasabad-mazandaran", "category": "villa", "label": "ویلا فروشی عباس‌آباد"},
+    {"city": "abbasabad-mazandaran", "category": "apartment", "label": "آپارتمان فروشی عباس‌آباد"},
+    {"city": "abbasabad-mazandaran", "category": "rent-villa", "label": "ویلا اجاره‌ای عباس‌آباد"},
+    {"city": "abbasabad-mazandaran", "category": "rent-apartment", "label": "آپارتمان اجاره‌ای عباس‌آباد"},
+    {"city": "abbasabad-mazandaran", "category": "plot", "label": "زمین عباس‌آباد"},
 ]
 
 SEEN_FILE = "seen_posts.json"
@@ -114,7 +114,7 @@ def check_new_listings():
 
 def main():
     print("ربات دیوار شروع به کار کرد! 🤖")
-    send_telegram("✅ ربات دیوار متل‌قو و عباس‌آباد شروع به کار کرد!\n\n🔍 دسته‌بندی‌ها:\n- ویلا و آپارتمان فروشی\n- ویلا و آپارتمان اجاره‌ای\n- زمین\n\n📍 شهرها: متل‌قو، عباس‌آباد\n\n⏰ هر ۶ ساعت بررسی می‌کنم!")
+    send_telegram("✅ ربات دیوار سلمانشهر و عباس‌آباد شروع به کار کرد!\n\n🔍 دسته‌بندی‌ها:\n- ویلا و آپارتمان فروشی\n- ویلا و آپارتمان اجاره‌ای\n- زمین\n\n📍 شهرها: سلمانشهر، عباس‌آباد\n\n⏰ هر ۶ ساعت بررسی می‌کنم!")
     
     check_new_listings()
     
